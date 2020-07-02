@@ -1,0 +1,196 @@
+14. Măriţi salariul tuturor angajaţilor din tabelul EMP_*** cu 5%. Vizualizati, iar apoi anulaţi
+modificările;
+
+
+UPDATE emp_bms
+SET salary = salary * 1.05;
+SELECT * FROM emp_bms;
+
+rollback;
+
+15. Schimbaţi jobul tuturor salariaţilor din departamentul 80 care au comision în 'SA_REP'.
+Anulaţi modificările.
+
+select * from emp_bms where department_id=80;
+update emp_bms
+set job_id=upper('Sa_REP')
+where department_id=80 
+and commission_pct is not null;
+rollback;
+
+ Schimbaţi jobul tuturor salariaţilor din departamentul 80 care au comisionul dat de la tastatura într-un job dat de la tastatura.
+Anulaţi modificările.
+
+update emp_bms
+set job_id='&job'
+where department_id=80
+and commission_pct=&comision;
+
+
+create table jobs_bms as select * from jobs;
+alter table jobs_bms
+add constraint pk_jobs_bms primary key(job_id);
+
+alter table emp_bms 
+add constraint fk_emp_JOBS_bms
+foreign key (job_id) references jobs_mng(job_id);
+rollback;
+
+delete from emp_bms
+where employee_id>206;
+
+
+select * from emp_bms;
+commit;
+
+Să se promoveze Douglas Grant la manager în departamentul 20, având o creştere de
+salariu cu 1000$. Se poate realiza modificarea prin intermediul unei singure comenzi?;
+
+update dept_bms
+set manager_id=(select employee_id
+                from emp_bms
+                where last_name='Grant'
+                and first_name='Douglas')
+where department_id=20;
+
+update emp_bms
+set salary=salary+1000
+where employee_id=(select employee_id
+                from emp_bms
+                where last_name='Grant'
+                and first_name='Douglas');
+                
+select * 
+from emp_bms
+where last_name='Grant'
+and first_name='Douglas';
+
+
+select *
+from dept_bms
+where department_id=20;
+
+Schimbaţi salariul şi comisionul celui mai prost plătit salariat din firmă, astfel încât să fie
+egale cu salariul si comisionul şefului său;
+
+
+select employee_id
+from emp_bms
+where salary=(select min(salary)
+              from emp_bms);
+              
+select manager_id
+from emp_bms
+where employee_id=(select employee_id
+                  from emp_bms
+                  where salary=(select min(salary)
+                  from emp_bms));
+                  
+
+update emp_bms
+set commission_pct=(select commission_pct
+                    from emp_bms
+                    where employee_id=(select manager_id
+                                        from emp_bms
+                                        where employee_id=(select employee_id
+                                                          from emp_bms
+                                                          where salary=(select min(salary)
+                                                          from emp_bms)  )   )  )
+where employee_id=(select employee_id
+                    from emp_bms
+                    where salary=(select min(salary)
+                                  from emp_bms));
+update emp_bms
+set salary=(select salary
+            from emp_bms
+            where employee_id=(select manager_id
+                                from emp_bms
+                                where employee_id=(select employee_id
+                                                  from emp_bms
+                                                  where salary=(select min(salary)
+                                                  from emp_bms)  )   )  )
+where employee_id=(select employee_id
+                    from emp_bms
+                    where salary=(select min(salary)
+                                  from emp_bms));
+                                  
+rollback;
+
+select * 
+from emp_bms
+where employee_id=132
+or employee_id=121;
+
+
+
+18. Să se modifice adresa de e-mail pentru angajaţii care câştigă cel mai mult în departamentul
+în care lucrează astfel încât acesta să devină iniţiala numelui concatenată cu prenumele.
+Dacă nu are prenume atunci în loc de acesta apare caracterul ‘.’. Anulaţi modificările.
+
+select employee_id
+from emp_bms a
+where salary=(select max(salary)
+              from emp_bms b
+              where b.department_id=a.department_id);
+              
+update emp_bms
+set email=decode(first_name, null, '.', substr(last_name, 0, 1) || first_name)
+where employee_id in (select employee_id
+                      from emp_bms a
+                      where salary = (select max(salary)
+                                      from emp_bms b
+                                      where b.department_id=a.department_id));
+                                      
+select * from emp_bms
+where employee_id in (select employee_id
+                      from emp_bms a
+                      where salary=(select max(salary)
+                                    from emp_bms b
+                                    where b.department_id=a.department_id) );
+rollback;
+
+
+19. Pentru fiecare departament să se mărească salariul celor care au fost angajaţi primii astfel
+încât să devină media salariilor din companie. Ţineţi cont de liniile introduse anterior;
+
+
+select employee_id
+from emp_bms
+where hire_date = (select min(hire_date)
+                  from emp_bms);
+                  
+select round(avg(salary))
+from emp_bms;
+
+22. Ştergeţi toate înregistrările din tabelul DEPT_***. Ce înregistrări se pot şterge? Anulaţi
+modificările.
+
+delete from dept_bms
+where department_id in (select  department_id from dept_bms
+                        minus
+                        select department_id from emp_bms);
+rollback;
+
+23. Ştergeţi angajaţii care nu au comision. Anulaţi modificările.
+
+delete emp_bms
+where commission_pct is null;
+rollback;
+
+25. Să se creeze un fişier script prin care se cere utilizatorului un cod de angajat din tabelul
+EMP_***. Se va lista inregistrarea corespunzatoare acestuia, iar apoi linia va fi suprimată
+din tabel.;
+
+
+select * from emp_bms
+where employee_id= &&b_id;
+
+delete from emp_bms
+where employee_id=&b_id;
+
+
+commit;
+rollback;
+
+savepoint s1;
+

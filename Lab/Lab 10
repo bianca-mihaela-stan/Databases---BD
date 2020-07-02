@@ -1,0 +1,160 @@
+--laboratorul 9
+I.
+SELECT employee_id, last_name, salary, department_id
+FROM employees
+WHERE employee_id = &p_cod;
+II.
+DEFINE p_cod; // Ce efect are?
+SELECT employee_id, last_name, salary, department_id
+FROM employees
+WHERE employee_id = &p_cod;
+UNDEFINE p_cod;
+III.
+DEFINE p_cod=100;
+SELECT employee_id, last_name, salary, department_id
+FROM employees
+WHERE employee_id = &&p_cod;
+UNDEFINE p_cod;
+IV.
+ACCEPT p_cod PROMPT “cod= “;
+SELECT employee_id, last_name, salary, department_id
+FROM employees
+WHERE employee_id = &p_cod;
+
+--16. Sa se afiseze numele, codul departamentului si salariul anual pentru toti angajatii care au un anumit
+--job.
+
+--IV.
+accept p_job prompt "cod_job= ";
+select e.last_name nume, e.department_id departament, e.salary*12 "salariu anua"
+from employees e, 
+                (select job_id
+                from jobs
+                where job_id='&p_job') t
+where e.job_id=t.job_id;
+
+--17.Sa se afiseze numele, codul departamentului si salariul anual pentru toti angajatii care au fost
+--angajati dupa o anumita data calendaristica.
+
+
+select e.last_name, e.department_id, e.salary*12
+from employees e
+where e.hire_date>'&p_data';
+
+select e.last_name, e.department_id, e.salary*12
+from employees e
+where e.hire_date>'&p_data';
+
+
+--18. Sa se afiseze o coloana aleasa de utilizator, dintr-un tabel ales de utilizator, ordonand dupa aceeasi
+--coloana care se afiseaza. De asemenea, este obligatorie precizarea unei conditii WHERE.
+
+select &p_coloana
+from &p_tabel
+where &p_where
+order by &p_coloana;
+
+--19. Sa se afiseze numele angajatului, codul job-ului, salariul si numele departamentului pentru salariatii
+--care lucreaza intr-o locatie(oras) data de utilizator. Va fi permisa cautarea case-insensitive.
+
+
+select e.last_name nume, e.job_id "cod job", e.salary salariu, d.department_name "numele departamentului"
+from employees e, departments d, locations l
+where e.department_id=d.department_id
+and d.location_id=l.location_id
+and lower(l.city)= '&p_city';
+
+
+--20. Să se afişeze numele, job-ul şi data angajării salariaţilor care au început lucrul între 2 date
+--calendaristice introduse de utilizator. Să se concateneze numele şi job-ul, separate prin spaţiu şi
+--virgulă, şi să se eticheteze coloana "Angajati". Se vor folosi comanda ACCEPT şi formatul pentru
+--data calendaristica MM/DD/YY.
+
+accept data_inceput prompt "Introduceri data de inceput:"
+accept data_sfarsit prompt "Introduceti data de sfarsit:"
+select e.last_name || ' ' || e.first_name, j.job_title, e.hire_date
+from employees e, jobs j
+where e.job_id=j.job_id
+and e.hire_date>to_date('&data inceput', 'mm/dd/yy')
+and e.hire_date<to_date('&data sfarsit', 'mm/dd/yy');
+
+--laboratorul 10
+
+--1.Scrieti o cerere care afiseaza departamentele, chiar și cele fără funcționari, și funcționarii,
+--chiar și cei care nu sunt asignați nici unui departament.
+
+select distinct d.department_name departament, e.last_name functionar
+from departments d full outer join employees e on (e.department_id=d.department_id);
+123 rezultate
+
+--2.Pentru fiecare angajat sa se afiseze: codul,numele, data angajarii in format zi-luna-an,
+--salariul convertit in euro (1 euro=1.2 dolari) cu 4 digiti si 2 zecimale, diferenta in zile intre
+--data angajarii sale si data de 1 IUNIE 2010, precum si denumirea departamentului in care
+--lucreaza.
+
+select e.employee_id cod, e.last_name nume, to_date(e.hire_date, 'dd-mm-yy') "DATA ANGAJARII", 
+to_char(e.salary/1.2, '0000.00') salariu,
+e.hire_date- to_date('01/Jun/2010') diferenta, d.department_name
+from employees e, departments d
+where e.department_id=d.department_id;
+
+--3.Sa se afiseze atat nr vechi de telefon, cat si nr nou rezultat prin modificarea celui de-al
+--doilea fragment de 3 cifre din nr de telefon al angajatilor conform regulii : ***.123.***.***
+--devine ***.033.***.***
+
+select phone_number "numar vechi", substr (phone_number, 1, 4) || '033' || substr(phone_number, 8) "numar nou"
+from employees
+where substr(phone_number, 5, 3) ='123';
+
+
+--1.Să se creeze tabelele EMP_pnu, DEPT_pnu (în şirul de caractere “pnu”, p reprezintă prima
+--literă a prenumelui, iar nu reprezintă primele două litere ale numelui dumneavoastră), prin
+--copierea structurii şi conţinutului tabelelor EMPLOYEES, respectiv DEPARTMENTS.
+
+create table emp_bms as select * from employees;
+create table dept_bms as select * from departments;
+
+select * from emp_bms;
+
+--2. Listaţi structura tabelelor sursă şi a celor create anterior. Ce se observă?
+
+describe emp_bms;
+
+--4.Pentru introducerea constrângerilor de integritate, executaţi instrucţiunile LDD indicate în
+--continuare. Prezentarea detaliată a LDD se va face în cadrul laboratorului 4.
+
+alter table emp_bms
+add constraint pk_emp_bms primary key (employee_id);
+
+alter table dept_bms
+add constraint pk_dept_bms primary key (department_id);
+
+alter table emp_bms
+add constraint fk_emp_dept_bms foreign key (department_id) references dept_bms(department_id);
+
+
+--5. Să se insereze departamentul 300, cu numele Programare în DEPT_***.
+--Analizaţi cazurile, precizând care este soluţia corectă şi explicând erorile celorlalte variante.
+--Pentru a anula efectul instrucţiunii(ilor) corecte, utilizaţi comanda ROLLBACK.
+--a) 
+INSERT INTO DEPT_bms
+VALUES (300, 'Programare');--nu sunt destule valori
+--b) 
+INSERT INTO DEPT_bms (department_id, department_name)
+VALUES (300, 'Programare');
+rollback;
+c) INSERT INTO DEPT_bms (department_name, department_id)
+VALUES (300, 'Programare');--tipuri gresite
+d) 
+INSERT INTO DEPT_bms (department_id, department_name, location_id)
+VALUES (300, 'Programare', null);--corect
+rollback;
+e) 
+INSERT INTO DEPT_bms (department_name, location_id)
+VALUES ('Programare', null);--id-ul nu poate fi null
+
+
+INSERT INTO DEPT_bms (department_id, department_name)
+VALUES (300, 'Programare');
+INSERT INTO DEPT_bms (department_id, department_name, location_id)
+VALUES (300, 'Programare', null);--corect

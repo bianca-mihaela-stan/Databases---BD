@@ -1,0 +1,171 @@
+
+--COUNT= nr total de angajati din firma
+SELECT COUNT(EMPLOYEE_ID)
+FROM EMPLOYEES;
+
+
+SELECT COUNT(DEPARTMENT_ID)
+FROM DEPARTMENTS;
+
+--numarul de angajati per departament
+SELECT D.DEPARTMENT_ID, COUNT (EMPLOYEE_ID), d.department_name--tot ec e aici in afara functiei de agregare trebuie sa fie si jos la group by
+FROM EMPLOYEES E, DEPARTMENTS D
+WHERE E.DEPARTMENT_ID=D.DEPARTMENT_ID
+GROUP BY D.DEPARTMENT_ID, d.department_name;--nu pot sa afisez si angajatii din fiecare departament deocamdata
+
+--lista de departamente la care nu lucreaza oameni
+SELECT DEPARTMENT_ID
+FROM DEPARTMENTS
+MINUS 
+SELECT DISTINCT DEPARTMENT_ID
+FROM EMPLOYEES;
+
+
+--lista de departamente la care lucreaza oameni
+SELECT DISTINCT D.DEPARTMENT_ID
+FROM EMPLOYEES E, DEPARTMENTS D
+WHERE D.DEPARTMENT_ID=E.DEPARTMENT_ID;
+
+--HAVING
+--departamentele care au mai mult de 5 angajati in care se afiseaza si numele departamentului
+SELECT E.DEPARTMENT_ID, COUNT(E.EMPLOYEE_ID), D.DEPARTMENT_NAME
+FROM EMPLOYEES E, DEPARTMENTS D
+WHERE E.DEPARTMENT_ID=D.DEPARTMENT_ID
+GROUP BY E.DEPARTMENT_ID, D.DEPARTMENT_NAME
+HAVING COUNT(EMPLOYEE_ID) >= 5;
+--in where pun orice conditie care nu are treaba cu functii de agregare
+--tot ce are treaba cu functii de agregare merge in having
+
+--Să se afişeze cel mai mare salariu, cel mai mic salariu, suma şi media salariilor
+--tuturor angajaţilor. Etichetaţi coloanele Maxim, Minim, Suma, respectiv Media. Sa se
+--rotunjeasca rezultatele.
+
+SELECT MAX(SALARY) MAXIM, MIN(SALARY) MINIM, SUM(SALARY) SUMA, ROUND(AVG(SALARY)) MEDIE
+FROM EMPLOYEES;
+
+--Să se modifice fisierul p1l4.sql pentru a se afişa minimul, maximul, suma şi media
+--salariilor pentru fiecare job.
+
+SELECT MAX(SALARY) MAXIM, MIN(SALARY) MINIM, SUM(SALARY) SUMA, ROUND(AVG(SALARY)) MEDIE, JOB_ID
+FROM EMPLOYEES
+GROUP BY JOB_ID;
+
+--lista job-urilor in care lucreaza oameni
+SELECT DISTINCT JOB_ID
+FROM EMPLOYEES;
+
+--<=>
+
+SELECT JOB_ID,  MAX(SALARY) MAXIM, MIN(SALARY) MINIM, SUM(SALARY) SUMA, ROUND(AVG(SALARY)) MEDIE
+FROM EMPLOYEES
+GROUP BY JOB_ID;
+
+--Să se afişeze numărul de angajaţi pentru fiecare job.
+SELECT JOB_ID, COUNT(*)
+FROM EMPLOYEES
+GROUP BY JOB_ID;
+
+--Să se determine numărul de angajaţi care sunt şefi. Etichetati coloana “Nr.
+--manageri”.
+
+SELECT COUNT(*) NR_MANAGERI
+FROM  (SELECT DISTINCT MANAGER_ID
+      FROM EMPLOYEES);--aici ia in considerare null pentru ca am *
+      
+SELECT COUNT(DISTINCT MANAGER_ID) NR_MANAGERI--daca omitem DSTINCT numaram toti angajatii firmei
+FROM EMPLOYEES;--aici nu ia in considerare null pentru ca nu am *
+
+--Să se afişeze diferenţa dintre cel mai mare si cel mai mic salariu. Etichetati coloana
+--“Diferenta”.
+SELECT MAX(SALARY)-MIN(SALARY) DIFERENTA
+FROM EMPLOYEES;
+
+--Să se afişeze diferenţa dintre cel mai mare si cel mai mic salariu pentru fiecare job in parte. Etichetati coloana
+--“Diferenta”.
+
+SELECT MAX(SALARY)-MIN(SALARY) DIFERENTA
+FROM EMPLOYEES
+GROUP BY JOB_ID;
+
+--Scrieţi o cerere pentru a se afişa numele departamentului, locaţia, numărul de
+--angajaţi şi salariul mediu pentru angajaţii din acel departament. Coloanele vor fi
+--etichetate corespunzător.
+
+SELECT d.department_name Departament, l.city Locatie,
+COUNT(*) Nr_angajati, AVG(salary) Salariu_mediu
+FROM locations l, departments d, employees e
+WHERE l.location_id = d.location_id
+AND d.department_id = e.department_id
+GROUP BY department_name, l.city;
+
+--Să se afişeze codul şi numele angajaţilor care câstiga mai mult decât salariul mediu
+--din firmă. Se va sorta rezultatul în ordine descrescătoare a salariilor.
+
+SELECT employee_id, first_name, last_name
+FROM employees
+WHERE salary > (SELECT AVG(salary)
+FROM employees)
+ORDER BY salary DESC;
+
+--Pentru fiecare şef, să se afişeze codul său şi salariul celui mai prost platit
+--subordonat. Se vor exclude cei pentru care codul managerului nu este cunoscut. De
+--asemenea, se vor exclude grupurile în care salariul minim este mai mic de 1000$.
+--Sortaţi rezultatul în ordine descrescătoare a salariilor.
+
+SELECT MANAGER_ID COD_MANAGER, MIN(SALARY) SALARIU_MIN
+FROM EMPLOYEES
+WHERE MANAGER_ID IS NOT NULL
+GROUP BY (MANAGER_ID)
+HAVING MIN(SALARY)>7000
+ORDER BY 2 DESC;
+
+--Pentru departamentele in care salariul maxim depăşeşte 3000$, să se obţină codul,
+--numele acestor departamente şi salariul maxim pe departament.
+
+SELECT DISTINCT D.DEPARTMENT_ID, D.DEPARTMENT_NAME, MAX(E.SALARY)
+FROM DEPARTMENTS D, EMPLOYEES E
+WHERE D.DEPARTMENT_ID=E.DEPARTMENT_ID
+GROUP BY D.DEPARTMENT_ID, D.DEPARTMENT_NAME
+HAVING MAX(E.SALARY)>7000;
+
+--Care este salariul mediu minim al job-urilor existente? Salariul mediu al unui job va fi
+--considerat drept media arirmetică a salariilor celor care îl practică.
+
+SELECT MIN(AVG(SALARY))
+FROM EMPLOYEES
+GROUP BY JOB_ID;
+
+--Sa se afiseze job-ul care are cel mai mic salariu mediu de mai sus.
+
+SELECT JOB_ID, AVG(SALARY)
+FROM EMPLOYEES
+GROUP BY JOB_ID
+HAVING AVG(SALARY)=(SELECT MIN(AVG(SALARY))
+                    FROM EMPLOYEES
+                    GROUP BY JOB_ID);
+         
+--Suma salariilor din fiecare departament           
+SELECT department_id, SUM(salary)--fiindca deja am impartit in departamente face suma pe job-uri
+FROM employees
+GROUP BY department_id
+ORDER BY 1;
+
+--Să se afişeze suma salariilor pe departamente şi, în cadrul acestora, pe job-uri.
+SELECT department_id, job_id, SUM(salary), COUNT(*)--fiindca deja am impartit in departamente si joburi, COUNT imi zice cati oameni lucreaza la acest job
+FROM employees
+GROUP BY department_id, job_id
+ORDER BY 1;
+
+--Să se afişeze codul, numele departamentului şi media salariilor pe departamente.
+SELECT D.DEPARTMENT_ID, DEPARTMENT_NAME, round(AVG(SALARY))
+FROM DEPARTMENTS D, EMPLOYEES E
+WHERE D.DEPARTMENT_ID=E.DEPARTMENT_ID
+GROUP BY D.DEPARTMENT_ID, DEPARTMENT_NAME;
+
+--Tema: 13-25
+
+--13. Să se afişeze maximul salariilor medii pe departamente cu nr de rezultate mentionat. DEADLINE: sambata seara pe un link special.
+SELECT max(round(AVG(SALARY)))
+FROM DEPARTMENTS D, EMPLOYEES E
+WHERE D.DEPARTMENT_ID=E.DEPARTMENT_ID
+GROUP BY D.DEPARTMENT_ID, DEPARTMENT_NAME;

@@ -1,0 +1,248 @@
+--Tema laborator 9
+
+--12. a) Să se obţină numele angajaţilor care au lucrat cel puţin pe aceleaşi proiecte ca şi angajatul având
+--codul 200.
+
+
+--varianta 1: Metoda 4
+select e.last_name nume
+from
+(select distinct a.employee_id
+from works_on a
+where not exists 
+((select b.project_id
+  from works_on b, project c
+  where b.project_id=c.project_id
+  and b.employee_id=200)
+minus
+  (select b.project_id
+  from works_on b, project c
+  where b.project_id=c.project_id
+  and b.employee_id=a.employee_id))) i
+where e.employee_id=i.employee_id;
+  
+Rezultate:
+Kochhar
+Whalen
+Russell
+Cambrault
+
+
+--varianta 2: Metoda 3
+select e.last_name nume
+from
+  (select distinct a.employee_id
+  from works_on a
+  minus
+  select t3.employee_id from
+    (select distinct employee_id, project_id
+      from (select distinct employee_id from works_on) t1,
+          (select distinct p.project_id from project p, works_on w
+            where p.project_id=w.project_id
+            and w.employee_id=200)
+      minus
+      select distinct b.employee_id, b.project_id
+      from works_on b) t3) rez, employees e
+where e.employee_id=rez.employee_id;
+
+Rezultate:
+Kochhar
+Russell
+Cambrault
+Whalen
+
+--varianta 3: Metoda 1
+
+select e.last_name nume
+from
+(select distinct a.employee_id
+from works_on a
+where not exists 
+                (select 1
+                from project p
+                where p.project_id in (select distinct p.project_id from project p, works_on w
+                                        where p.project_id=w.project_id
+                                        and w.employee_id=200)
+                and not exists 
+                              (select 1 
+                              from works_on b
+                              where b.project_id=p.project_id
+                              and b.employee_id =a.employee_id))) i, employees e
+where i.employee_id=e.employee_id;
+
+Rezultate:
+Kochhar
+Whalen
+Russell
+Cambrault
+
+
+
+--b) Să se obţină numele angajaţilor care au lucrat cel mult pe aceleaşi proiecte ca şi angajatul având
+--codul 200.
+
+
+--varianta 1: minus
+
+select e.last_name nume
+from
+(select distinct a.employee_id
+from works_on a
+where not exists 
+(
+  (select b.project_id
+  from works_on b, project c
+  where b.project_id=c.project_id
+  and b.employee_id=a.employee_id)
+minus
+  (select b.project_id
+  from works_on b, project c
+  where b.project_id=c.project_id
+  and b.employee_id=200))) i, employees e
+where e.employee_id=i.employee_id;
+
+
+Rezultate:
+Vishney
+Tucker
+Taylor
+Whalen
+Russell
+
+--varianta 2: Metoda 1
+
+select e.last_name nume
+from employees e,
+(select distinct a.employee_id
+from works_on a
+where not exists 
+                (select 1
+                from project b
+                where b.project_id in (select distinct project_id
+                                      from works_on u
+                                      where u.employee_id=a.employee_id)
+                and not exists 
+                              (select 1
+                              from works_on c, project d
+                              where c.project_id=d.project_id
+                              and c.employee_id=200
+                              and b.project_id=c.project_id))) i
+where e.employee_id=i.employee_id;
+
+Rezultate:
+Cambrault
+Vishney
+Whalen
+Russell
+Taylor
+Tucker
+
+
+
+--13. Să se obţină angajaţii care au lucrat pe aceleaşi proiecte ca şi angajatul având codul 200.
+
+--varianta 1: diferenta de multimi
+
+select e.last_name nume
+from
+(select distinct a.employee_id
+from works_on a
+where not exists 
+(
+  (select b.project_id
+  from works_on b, project c
+  where b.project_id=c.project_id
+  and b.employee_id=a.employee_id)
+minus
+  (select b.project_id
+  from works_on b, project c
+  where b.project_id=c.project_id
+  and b.employee_id=200))
+and not exists 
+((select b.project_id
+  from works_on b, project c
+  where b.project_id=c.project_id
+  and b.employee_id=200)
+minus
+  (select b.project_id
+  from works_on b, project c
+  where b.project_id=c.project_id
+  and b.employee_id=a.employee_id))) i, employees e
+where e.employee_id=i.employee_id;
+  
+Rezultate:
+Whalen
+Russell
+Cambrault
+
+--varianta 2: intersectia a doua rezultate obtinute cu metoda 1
+
+select e.last_name nume
+from employees e,
+(select distinct a.employee_id
+from works_on a
+where not exists 
+                (select 1
+                from project b
+                where b.project_id in (select distinct p.project_id 
+                                        from project p, works_on w
+                                        where p.project_id=w.project_id
+                                        and w.employee_id=200)
+                and not exists 
+                              (select 1
+                              from works_on c, project d
+                              where c.project_id=d.project_id
+                              and c.project_id=b.project_id
+                              and a.employee_id=c.employee_id))
+intersect        
+(select distinct a.employee_id
+from works_on a
+where not exists 
+                (select 1
+                from project b
+                where b.project_id in (select distinct project_id
+                                      from works_on u
+                                      where u.employee_id=a.employee_id)
+                and not exists 
+                              (select 1
+                              from works_on c, project d
+                              where c.project_id=d.project_id
+                              and c.employee_id=200
+                              and b.project_id=c.project_id)))) i
+where e.employee_id=i.employee_id;
+
+Rezultate:
+Russell
+Cambrault
+Whalen
+
+--varianta 3: o combinatie dintre metoda 1 si metoda 2
+
+select e.last_name nume
+from employees e,
+(select distinct a.employee_id--mai multe sau cel putin aceleasi proiecte
+from works_on a
+where not exists 
+                (select 1
+                from project b
+                where b.project_id in (select distinct p.project_id 
+                                        from project p, works_on w
+                                        where p.project_id=w.project_id
+                                        and w.employee_id=200)
+                and not exists 
+                              (select 1
+                              from works_on c, project d
+                              where c.project_id=d.project_id
+                              and c.project_id=b.project_id
+                              and a.employee_id=c.employee_id))
+group by a.employee_id
+having count(project_id)=(select count(*) from project p, works_on w
+                        where p.project_id=w.project_id
+                        and w.employee_id=200)) i
+where i.employee_id=e.employee_id;
+
+
+Rezultate:
+Russell
+Cambrault
+Whalen

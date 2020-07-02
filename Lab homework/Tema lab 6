@@ -1,0 +1,186 @@
+--Tema: 13-25 cu nr de rezultate mentionat. DEADLINE: sambata seara pe un link special.
+
+--13. Să se afişeze maximul salariilor medii pe departamente.
+SELECT max(round(AVG(SALARY)))
+FROM DEPARTMENTS D, EMPLOYEES E
+WHERE D.DEPARTMENT_ID=E.DEPARTMENT_ID
+GROUP BY D.DEPARTMENT_ID;--rezultat: 19333
+
+--14. Sa se obtina codul, titlul şi salariul mediu al job-ului pentru care salariul mediu este
+--minim.
+
+SELECT J.JOB_ID, JOB_TITLE, AVG(SALARY)
+FROM JOBS J, EMPLOYEES E
+WHERE J.JOB_ID=E.JOB_ID
+GROUP BY J.JOB_ID, JOB_TITLE
+HAVING AVG(SALARY)=(SELECT MIN(AVG(SALARY))
+                    FROM EMPLOYEES
+                    GROUP BY JOB_ID);--rezultat: PU_CLERK	Purchasing Clerk	2780
+                    
+--15.Să se afişeze salariul mediu din firmă doar dacă acesta este mai mare decât 2500.
+--(clauza HAVING fără GROUP BY)
+
+SELECT ROUND(AVG(SALARY))
+FROM EMPLOYEES
+HAVING AVG(SALARY)>2500;--rezultat: 6462
+
+--16.Să se afişeze suma salariilor pe departamente şi, în cadrul acestora, pe job-uri.
+SELECT DEPARTMENT_ID, JOB_ID, SUM(SALARY)
+FROM EMPLOYEES
+GROUP BY DEPARTMENT_ID, JOB_ID
+order by department_id;--rezultat: 20 de randuri
+
+--17.Să se afişeze numele departamentului si cel mai mic salariu din departamentul
+--avand cel mai mare salariu mediu.
+SELECT DEPARTMENT_NAME, MIN(SALARY)
+FROM EMPLOYEES E, DEPARTMENTS D
+WHERE D.DEPARTMENT_ID=E.DEPARTMENT_ID
+GROUP BY D.DEPARTMENT_ID, DEPARTMENT_NAME
+HAVING AVG(SALARY)=(SELECT MAX(AVG(SALARY))
+                    FROM EMPLOYEES
+                    GROUP BY DEPARTMENT_ID);--rezultat: 17000
+                    
+--18. Sa se afiseze codul, numele departamentului si numarul de angajati care lucreaza in
+--acel departament pentru:
+--a) departamentele in care lucreaza mai putin de 4 angajati;
+--b) departamentul care are numarul maxim de angajati.
+
+--a)
+select d.department_id, department_name, count(*)
+from employees e, departments d
+where d.department_id=e.department_id
+group by d.department_id, department_name
+having count(*)<4;
+
+--b)
+select d.department_id, department_name, count(*)
+from employees e, departments d
+where d.department_id=e.department_id
+group by d.department_id, department_name
+having count(*)=(select max(count(*))
+                from employees e, departments d
+                where d.department_id=e.department_id
+                group by d.department_id, department_name);--rezultat: 45
+                
+--19.Sa se afiseze salariatii care au fost angajati în aceeaşi zi a lunii în care cei mai multi
+--dintre salariati au fost angajati. !!!!! aici trebuie ziua din luna, dar nu aceeasi luna !!!!
+
+--calculez cati angajati au fot angajati in fiecare zi
+--apoi ma uit care e numarul maxim de angajati intr-o zi
+--apoi fac iar tabela cu numar de angajati pe zile si vad care e ziua in care au fost angajati cei mai multi
+--si afisez angajatii angajati in acea zi
+select employee_id, last_name, hire_date
+from employees
+where hire_date in
+          (select hire_date
+          from employees
+          group by hire_date
+          having count(*)=
+                      (select max(count(*)) 
+                       from employees
+                       group by hire_date));
+--rezultat:206	Gietz	07-JUN-94
+205	Higgins	07-JUN-94
+204	Baer	07-JUN-94
+203	Mavris	07-JUN-94
+                            
+--20.Să se obţină numărul departamentelor care au cel puţin 15 angajaţi.
+select count(*)
+from (select count (*) nr
+      from employees
+      group by department_id)
+where nr>15;--rezultat: 2
+
+--<=>
+
+SELECT COUNT(COUNT(department_id))
+FROM employees
+GROUP BY department_id
+HAVING COUNT(*) > 15;
+
+--21. Să se obţină codul departamentelor şi suma salariilor angajaţilor care lucrează în
+--acestea, în ordine crescătoare. Se consideră departamentele care au mai mult de 10
+--angajaţi şi al căror cod este diferit de 30.
+
+--vad cati angajati sunt in fiecare departament
+--vad care departamente au mai mult de 10 angajati si au id-ul diferit de 30
+--fac join-ul cu tabela employees pentru salary, grupand elementele dupa nr si departament_id
+select d.department_id, sum(salary) suma
+from (select count (*) nr, department_id
+      from employees
+      group by department_id) d, employees e
+where d.nr>10
+and d.department_id!=30
+and d.department_id=e.department_id
+group by d.department_id
+order by department_id;
+--rezultat: 45	50	156400
+            34	80	304500
+            
+select department_id, sum(salary)
+from employees
+where department_id!=30
+group by department_id
+having( count(employee_id)>10))
+order by 2;
+
+--22. Sa se afiseze codul, numele departamentului, numarul de angajati si salariul mediu
+--din departamentul respectiv, impreuna cu numele, salariul si jobul angajatilor din acel
+--departament. Se vor afişa şi departamentele fără angajaţi (outer join).
+
+select t.department_id, t.department_name, t.nr, t.med, last_name, salary, job_id
+from (select d.department_id, d.department_name, count(e.employee_id) nr, round(avg(salary)) med
+      from departments d, employees e                              
+      where d.department_id=e.department_id(+)
+      group by d.department_id, d.department_name) t, employees e
+where e.department_id(+)=t.department_id
+order by department_id;--rezultat: 122 de randuri
+
+--23. Scrieti o cerere pentru a afisa, pentru departamentele avand codul > 80, salariul total
+--pentru fiecare job din cadrul departamentului. Se vor afisa orasul, numele
+--departamentului, jobul si suma salariilor. Se vor eticheta coloanele corespunzator.
+
+select city "oras", s.department_name "nume departament", s.job_title "job", s.suma "suma salariilor"
+from locations l, departments d, (select d.department_name, j.job_title,  sum(salary) suma, d.department_id
+                  from departments d, jobs j, employees e
+                  where d.department_id=e.department_id
+                  and e.job_id=j.job_id
+                  and d.department_id>80
+                  group by d.department_name, j.job_title, d.department_id) s
+where s.department_id=d.department_id
+and d.location_id=l.location_id;
+--rezultat:
+Seattle	Accounting	Accounting Manager	          12000
+Seattle	Accounting	Public Accountant	            8300
+Seattle	Finance	    Finance Manager	              12000
+Seattle	Finance    	Accountant	                  39600
+Seattle	Executive	  President	                    24000
+Seattle	Executive	  Administration Vice President	34000
+
+--24. Care sunt angajatii care au mai avut cel putin doua joburi?
+select employee_id 
+from
+      (select employee_id, count(*) nr
+      from job_history
+      group by employee_id)
+where nr>=2;
+--rezultat: 
+101
+176
+200
+
+select e.fist_name, e.last_anem, count(j,job_id)
+from employees e, job_history j
+where e.emplyee_id=j.employee_id
+group by e.employee_id, e.first_anme, e.last_name
+having count(j.job_id)>=2;
+
+--25. Să se calculeze comisionul mediu din firmă, luând în considerare toate liniile din tabel.
+select avg(nvl(commission_pct, 0))
+from employees;
+
+--<=>
+
+SELECT SUM(commission_pct)/COUNT(*)
+FROM employees;
+--rezultat: 0.072897196261682242990654205607476635514

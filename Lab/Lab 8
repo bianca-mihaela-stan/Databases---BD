@@ -1,0 +1,168 @@
+--LABORATOR 8
+
+--9. Sa se obtina numele salariatilor care lucreaza intr-un departament in care exista cel putin 1
+--angajat cu salariul peste 12500$.
+
+SELECT e.last_name, e.salary, e.department_id
+FROM employees e
+WHERE EXISTS (SELECT e2.employee_id
+FROM employees e2
+WHERE e2.department_id = e.department_id
+AND e2.salary > 12500);--39 rezultate
+
+--<=>
+
+SELECT DISTINCT e.last_name, e.salary, e.department_id
+FROM employees e, employees e2
+WHERE e2.department_id = e.department_id
+and e2.salary > 12500;--39 rezultate
+
+--10. Sa se obtina numele salariatilor care lucreaza intr-un departament in care exista cel putin 1
+--angajat cu salariul egal cu salariul maxim din departamentul 30.
+
+SELECT last_name, salary
+FROM employees e
+WHERE EXISTS (SELECT 1--pot sa dau si select de un nr pentru ca de fapt nu ma intereseaza ce returneaza, ci doar ca exista
+              FROM employees
+              WHERE e.department_id = department_id
+              AND salary = (SELECT MAX(salary)
+              FROM employees
+              WHERE department_id =30));--40 rezultate
+              
+              
+--vreau sa vad toti angajatii care au salariul egal cu maximul salarial din departamentul 30
+select *
+FROM employees e
+where e.salary=(SELECT MAX(salary)
+                FROM employees
+                WHERE department_id =30); --3 rezultate
+
+
+--11. Să se determine departamentele în care nu există nici un angajat.
+
+SELECT department_id, department_name
+FROM departments d
+WHERE NOT EXISTS (SELECT 'x'
+FROM employees
+WHERE department_id = d.department_id);
+
+--12. Să se afişeze codul, numele şi prenumele angajaţilor care au cel puţin doi subalterni.
+
+--variante fara exists
+
+select e.employee_id cod, e.last_name nume, e.first_name prenume
+from employees e
+where employee_id in (select manager_id
+                      from employees
+                      where manager_id is not null
+                      group by manager_id
+                      having count(*)>=2);--15 rezultate
+ 
+--<=> 
+                      
+select e.employee_id cod, e.last_name nume, e.first_name prenume
+from employees e
+where 2<=(select count(*)
+          from employees p
+          where p.manager_id =e.employee_id);
+
+--varianta cu exists
+
+select e.employee_id cod, e.last_name nume, e.first_name prenume
+from employees e
+where exists( select count(*)
+              from employees
+              where manager_id=e.employee_id
+              having count(*)>=2);
+            
+--varianta cu exists modificata ca sa afiseze si nr de subalterni
+
+select e.employee_id cod, e.last_name nume, e.first_name prenume, aux.nr_subalterni nr_subalterni
+from employees e, (select count(*) nr_subalterni, manager_id
+                    from employees
+                    group by manager_id) aux
+where exists( select count(*)
+              from employees
+              where manager_id=e.employee_id
+              having count(*)>=2)
+and aux.manager_id=e.employee_id;
+
+--alta varianta de a afisa nr de subalterni
+
+select e.employee_id cod, e.last_name nume, e.first_name prenume, (select count(*) nr_subalterni
+                                                                  from employees
+                                                                  where e.employee_id=manager_id
+                                                                  group by manager_id) nr_subalterni
+from employees e
+where exists( select count(*)
+              from employees
+              where manager_id=e.employee_id
+              having count(*)>=2);
+
+
+--tema 13, 14, 5, 8, 9, 11: mai multe variante
+
+WITH val_dep AS (SELECT department_name, SUM(salary) AS total
+FROM departments d, employees e
+WHERE d.department_id = e.department_id
+GROUP BY department_name),
+val_medie AS (SELECT SUM(total)/COUNT(*) AS medie
+FROM val_dep)
+SELECT *
+FROM val_dep
+WHERE total > (SELECT medie
+FROM val_medie)
+ORDER BY department_name;
+
+--2. Utilizând clauza WITH, să se scrie o cerere care afişează numele managerilor şi valoarea totală
+--a salariilor subordonaților lor. Se vor afișa doar managerii a căror valoare totală a salariilor
+--subordonaților este mai mică decât media valorilor totale ale salariilor tuturor angajatilor din
+--departamentul în care lucrează respectivul manager.
+
+with num_sum as (select e.last_name nume_manager, e.employee_id, man.suma_salarii suma_salarii
+                from employees e, (select manager_id, sum(salary) suma_salarii
+                                  from employees
+                                  where manager_id is not null
+                                  group by manager_id) man
+                where e.employee_id=man.manager_id)
+select num_sum.nume_manager, num_sum.suma_salarii
+from num_sum, employees e1
+where num_sum.employee_id=e1.employee_id
+and num_sum.suma_salarii<(select avg(salary)
+                            from employees e3
+                            where e3.department_id=e1.department_id);
+                            
+De Haan	9000
+Hartstein	6000
+Higgins	8300
+
+--Analiza top-n
+
+
+--4. Să se determine cele mai prost plătite 3 job-uri, din punct de vedere al mediei salariilor.
+
+select job_id
+from
+(select j.job_id
+from jobs j, (select avg(salary) sal, e.job_id
+            from employees e
+            group by job_id) avg_sal
+where avg_sal.job_id=j.job_id
+order by avg_sal.sal)
+where rownum <=3;
+AD_PRES
+AD_VP
+MK_MAN;
+
+with nr_sal as(select count(*) nr, department_id
+              from employees
+              where department_id is not null)
+              group by department_id),
+aux as (select distinct department_id, manager_id
+                    from employees
+                    where manager_id is not null
+                    and department_id is not null)
+select d.department_name, aux.manager_id, nr_sal.nr
+from departments d
+where d.department_is=aux.department_id
+and nr.department_id=d.department_id;

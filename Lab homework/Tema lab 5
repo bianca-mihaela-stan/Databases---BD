@@ -1,0 +1,31 @@
+--15.Să se determine codul angajaţilor, codul job-urilor şi numele celor al căror salariu
+--este mai mare decât 3000 sau este egal cu media dintre salariul minim şi cel maxim
+--pentru job-ul respectiv.
+
+SELECT E.EMPLOYEE_ID, E.JOB_ID, E.LAST_NAME, E.SALARY, (J.MIN_SALARY+J.MAX_SALARY)/2
+FROM EMPLOYEES E, JOBS J
+WHERE E.JOB_ID=J.JOB_ID
+AND (E.SALARY>3000
+OR E.SALARY=(J.MIN_SALARY+J.MAX_SALARY)/2);
+
+
+--18.Folosind subcereri, să se afişeze numele şi salariul angajaţilor conduşi direct de
+--preşedintele companiei (acesta este considerat angajatul care nu are manager).
+
+SELECT LAST_NAME, SALARY
+FROM EMPLOYEES
+WHERE MANAGER_ID IN (SELECT EMPLOYEE_ID
+                    FROM EMPLOYEES
+                    WHERE MANAGER_ID IS NULL);
+
+--19.Scrieți o cerere pentru a afişa numele, codul departamentului și salariul angajaților
+--al căror cod de departament și salariu coincid cu codul departamentului și salariul unui
+--angajat care câștigă comision.
+
+SELECT E1.LAST_NAME, D1.DEPARTMENT_NAME, E1.SALARY
+FROM EMPLOYEES E1, DEPARTMENTS D1
+WHERE (E1.DEPARTMENT_ID, E1.SALARY) IN (SELECT E2.DEPARTMENT_ID, E2.SALARY
+                        FROM DEPARTMENTS D2, EMPLOYEES E2
+                        WHERE COMMISSION_PCT IS NOT NULL)
+AND E1.DEPARTMENT_ID=D1.DEPARTMENT_ID;
+              

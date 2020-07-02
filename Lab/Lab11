@@ -1,0 +1,175 @@
+desc emp_bms;
+
+INSERT INTO dept_bms (department_id, department_name, location_id)
+VALUES (300, 'Programare', null);
+
+--6. Să se insereze un angajat corespunzător departamentului introdus anterior în tabelul EMP_***,
+precizând valoarea NULL pentru coloanele a căror valoare nu este cunoscută la inserare
+(metoda implicită de inserare). Determinaţi ca efectele instrucţiunii să devină permanente.
+insert into emp_bms
+values (250, null, 'Stan', 'bianca@gmail.com', null, sysdate, 'ceva', null, null, null, 300);
+
+--7. Să se mai introducă un angajat corespunzător departamentului 300, precizând după numele
+tabelului lista coloanelor în care se introduc valori (metoda explicita de inserare). Se presupune
+că data angajării acestuia este cea curentă (SYSDATE). Salvaţi înregistrarea.
+
+INSERT INTO EMP_bms (employee_id, first_name, last_name, email, hire_date, job_id, department_id)
+VALUES (251, 'Prenume', 'Nume', '@gmail', sysdate, 'id', 300);
+COMMIT;
+
+select *
+from emp_bms
+where employee_id in (251, 250);
+
+--8. Este posibilă introducerea de înregistrări prin intermediul subcererilor (specificate în locul
+tabelului). Ce reprezintă, de fapt, aceste subcereri? Să se analizeze următoarele comenzi
+INSERT:
+
+
+
+INSERT INTO emp_bms (employee_id, last_name, email, hire_date, job_id, salary,
+commission_pct)
+VALUES (252, 'Nume252', 'nume252@emp.com',SYSDATE, 'SA_REP', 5000, NULL);
+
+SELECT employee_id, last_name, email, hire_date, job_id, salary, commission_pct
+FROM emp_bms
+WHERE employee_id=252;
+
+ROLLBACK;
+
+--subcerem coloanele pentru care vrem sa introducem informatii si in ce tabela
+INSERT INTO
+(SELECT employee_id, last_name, email, hire_date, job_id, salary,
+commission_pct
+FROM emp_bms)
+VALUES (252, 'Nume252', 'nume252@emp.com',SYSDATE, 'SA_REP', 5000, NULL);
+
+SELECT employee_id, last_name, email, hire_date, job_id, salary, commission_pct
+FROM emp_bms
+WHERE employee_id=252;
+ROLLBACK;
+
+--daca dau commit nu mai pot sa sterg inserarile prin rollback
+--daca nu dau commit pot sa dau rollback si sa sterg tot
+
+
+9. Creaţi un nou tabel, numit EMP1_bms, care va avea aceeaşi structură ca şi EMPLOYEES, dar
+nici o înregistrare. Copiaţi în tabelul EMP1_*** salariaţii (din tabelul EMPLOYEES) al căror
+comision depăşeşte 25% din salariu.
+
+--
+create table emp1_bms as select * from employees;
+
+drop table emp1_bms;--sterge tabela cu totul, nu doar informatiile din tabela
+delete from emp1_bms;
+--<=> (cu delete scris in forma asta) delete it permita sa stergi si mai putine linii
+truncate emp1_bms;
+
+
+select * from emp1_bms;
+insert into emp1_bms
+select*
+from employees
+where commission_pct>0.25;
+
+insert into emp1_bms
+select * 
+from employees
+where salary=(select max(salary)
+              from employees);
+
+select * from emp1_bms
+
+11. Să permită introducerea de înregistrări în tabelul EMP_*** în mod interactiv. Se vor cere
+utilizatorului: codul, numele, prenumele si salariul angajatului. Câmpul email se va completa
+automat prin concatenarea primei litere din prenume şi a primelor 7 litere din nume;
+--
+select cod, nume, prenume, salariu, substr(nume, 0, 1) || substr(prenume, 0, 7)
+from employees
+where cod=&cod
+and nume=&nume
+and prenume=&prenume
+and salariu=&salariu;
+
+define salariu=&salariul;
+define nume=&nume;
+define prenume=&prenume;
+define cod=&cod;
+desc emp1_bms;
+
+define salariu=&salariul;
+define nume=&nume;
+define prenume=&prenume;
+define cod=&cod;
+insert into emp1_bms (employee_id, first_name, last_name, email, hire_date, job_id, salary)
+values (&cod, '&prenume', '&nume', substr('&nume',1) || substr('&prenume', 7), sysdate,'id', &salariu);
+
+
+undefine cod;
+undefine nume;
+undefine prenume;
+undefine salariu;
+
+
+rollback;
+
+
+
+
+12. Creaţi 2 tabele emp2_*** şi emp3_*** cu aceeaşi structură ca tabelul EMPLOYEES, dar fără
+înregistrări (acceptăm omiterea constrângerilor de integritate). Prin intermediul unei singure
+comenzi, copiaţi din tabelul EMPLOYEES:
+- în tabelul EMP1_*** salariaţii care au salariul mai mic decât 5000;
+- în tabelul EMP2_*** salariaţii care au salariul cuprins între 5000 şi 10000;
+- în tabelul EMP3_*** salariaţii care au salariul mai mare decât 10000.
+Verificaţi rezultatele, apoi ştergeţi toate înregistrările din aceste tabele.
+
+
+create table emp2_bms as select * from employees;
+create table emp3_bms as select * from employees;
+delete from emp2_bms;
+delete from emp3_bms;
+delete from emp1_bms;
+
+insert first
+when salary<=5000 then into emp1_bms
+when salary>=5000 and salary<=10000 then into emp2_bms
+else into emp3_bms
+select * from employees;
+
+rollback;
+
+select *
+from emp1_bms;
+select *
+from emp2_bms;
+select distinct *
+from emp3_bms;
+
+
+13. Să se creeze tabelul EMP0_*** cu aceeaşi structură ca tabelul EMPLOYEES (fără
+constrângeri), dar fără nici o înregistrare. Copiaţi din tabelul EMPLOYEES:
+- în tabelul EMP0_*** salariaţii care lucrează în departamentul 80;
+- în tabelul EMP1_*** salariaţii care au salariul mai mic decât 5000;
+- în tabelul EMP2_*** salariaţii care au salariul cuprins între 5000 şi 10000;
+- în tabelul EMP3_*** salariaţii care au salariul mai mare decât 10000.
+Dacă un salariat se încadrează în tabelul emp0_*** atunci acesta nu va mai fi inserat şi în alt
+tabel (tabelul corespunzător salariului său);
+
+
+create table emp0_bms as select * from employees;
+delete from emp0_bms;
+delete from emp2_bms;
+delete from emp3_bms;
+delete from emp1_bms;
+insert first
+when department_id=80 then into emp0_bms
+when salary<=5000 then into emp1_bms
+when salary>=5000 and salary<=10000 then into emp2_bms
+else into emp3_bms
+select * from employees;
+
+select * from emp0_bms; --34
+select * from emp1_bms;--49
+select * from emp2_bms;--17
+select * from emp3_bms;--7

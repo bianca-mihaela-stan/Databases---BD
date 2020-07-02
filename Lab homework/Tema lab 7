@@ -1,0 +1,86 @@
+--Tema
+
+--4. Pentru fiecare departament, s? se afi?eze numele acestuia, numele ?i salariul celor mai
+--prost pl?ti?i angaja?i din cadrul s?u.
+
+-- cu subcerere in clauza FROM
+
+select d.department_name "NUMELE DEPARTAMENTULUI", e.last_name || ' ' || e.first_name nume, e.salary salariu
+from departments d, employees e, (select min(salary) salariu, department_id
+                                  from employees
+                                  where department_id is not null
+                                  group by department_id) aux
+where d.department_id=e.department_id
+and e.department_id=aux.department_id
+and e.salary=aux.salariu;
+--12 rezultate
+Administration	Whalen Jennifer	4400
+Marketing	Fay Pat	6000
+Purchasing	Colmenares Karen	2500
+Human Resources	Mavris Susan	6500
+Shipping	Olson TJ	2100
+IT	Lorentz Diana	4200
+Public Relations	Baer Hermann	10000
+Sales	Kumar Sundita	6100
+Executive	De Haan Lex	17000
+Executive	Kochhar Neena	17000
+Finance	Popp Luis	6900
+Accounting	Gietz William	8300
+
+--fara sincronizare
+
+select d.department_name "NUMELE DEPARTAMENTULUI", e.last_name || ' ' || e.first_name nume, e.salary salariu
+from departments d, employees e
+where d.department_id=e.department_id
+and (e.salary, e.department_id) in (select min(salary) salariu, department_id
+                                  from employees
+                                  where department_id is not null
+                                  group by department_id);--12 rezultate
+
+--cu sincronizare
+
+select d.department_id, d.department_name "NUMELE DEPARTAMENTULUI", e.last_name || ' ' || e.first_name nume, e.salary salariu
+from departments d, employees e
+where d.department_id=e.department_id
+and (e.salary) = (select min(salary) salariu
+                  from employees e2
+                  where department_id is not null
+                  and d.department_id=e2.department_id
+                  group by department_id);--12 rezultate
+
+--8. Pentru fiecare departament, s? se obtina numele salariatului avand cea mai mare vechime din
+--departament. S? se ordoneze rezultatul dup? numele departamentului.
+
+--cu sincronizare
+
+select d.department_name "NUMELE DEPARTAMENTULUI", e1.last_name || ' ' || e1.first_name nume
+from employees e1, departments d
+where hire_date= (select min(e2.hire_date)
+                  from employees e2
+                  where e1.department_id=e2.department_id
+                  group by e2.department_id)
+and d.department_id=e1.department_id
+order by d.department_name;
+--12 rezultate
+Accounting	Higgins Shelley
+Accounting	Gietz William
+Administration	Whalen Jennifer
+Executive	King Steven
+Finance	Faviet Daniel
+Human Resources	Mavris Susan
+IT	Hunold Alexander
+Marketing	Hartstein Michael
+Public Relations	Baer Hermann
+Purchasing	Raphaely Den
+Sales	King Janette
+Shipping	Kaufling Payam
+
+--fara sincronizare
+
+select d.department_name "NUMELE DEPARTAMENTULUI", e1.last_name || ' ' || e1.first_name nume
+from employees e1, departments d
+where (e1.hire_date, e1.department_id) IN (select min(e2.hire_date), department_id
+                                        from employees e2
+                                        group by e2.department_id)
+and d.department_id=e1.department_id
+order by d.department_name;--12 rezultate

@@ -1,0 +1,286 @@
+--tema 13, 14, 5, 8, 9, 11: mai multe variante
+
+--13. S? se determine loca?iile în care se afl? cel pu?in un departament.
+
+--varianta cu EXISTS
+
+select l.location_id "ID LOCATIE", city "ORAS"
+from locations l
+where exists (select 1
+              from departments d
+              where d.location_id=l.location_id);
+              
+--varianta cu IN
+
+select location_id "ID LOCATIE", city "ORAS"
+from locations
+where location_id in (select d.location_id
+                      from departments d
+                      group by d.location_id);
+                      
+--varianta doar cu GROUP BY 
+                      
+select d.location_id "ID LOCATIE", city "ORAS"
+from departments d, locations l
+where d.location_id=l.location_id
+group by d.location_id, city;
+--toate variantele intorc 7 rezultate:
+1800	Toronto
+2400	London
+1400	Southlake
+2500	Oxford
+1700	Seattle
+2700	Munich
+1500	South San Francisco
+
+
+--14. Titlurile joburilor care nu au fost niciodata ocupate in firma (nici acum, nici in trecut)
+
+--varianta cu reuniune si diferenta
+
+(select job_id "ID JOB"
+from jobs
+)
+minus
+(select distinct job_id
+from employees
+union
+select job_id
+from job_history);
+
+--varianta cu exists
+
+select job_id "ID JOB"
+from jobs j
+where not exists(select 1
+                from employees e
+                where e.job_id=j.job_id)
+and not exists (select 1
+                from job_history h
+                where h.job_id=j.job_id);
+
+--varianta cu in
+
+select job_id "ID JOB"
+from jobs
+where job_id not in (select distinct job_id
+                from employees e)
+and job_id not in (select distinct job_id
+                from job_history h);
+                
+--toate 3 varinatele returneaza1 rezultat: test1      
+          
+                
+--5.Sa se afiseze cele mai populate top 4 departamente(denumire) si nr de angajati din fiecare.
+
+--varianta cu with si rownum
+
+with nr_dep as (select count(*) nr, e.department_id
+      from employees e
+      where e.department_id is not null
+      group by e.department_id
+      order by nr desc)
+select d.department_name "DENUMIRE", nr_dep.nr
+from departments d, nr_dep
+where rownum<=4
+and d.department_id=nr_dep.department_id;
+
+--varianta fara with
+
+select d.department_name "DENUMIRE", nr_dep.nr
+from departments d, (select count(*) nr, e.department_id
+                      from employees e
+                      where e.department_id is not null
+                      group by e.department_id
+                      order by nr desc) nr_dep
+where rownum<=4
+and d.department_id=nr_dep.department_id;
+
+--ambele variante returneaza:
+Shipping	45
+Sales	34
+Purchasing	6
+Finance	6
+
+
+--8. S? se afi?eze numele, data angaj?rii, salariul ?i o coloan? reprezentând salariul dup? ce se
+--aplic? o m?rire, astfel: pentru salaria?ii angaja?i în 1989 cre?terea este de 20%, pentru cei
+--angaja?i în 1990 cre?terea este de 15%, iar salariul celor angaja?i în anul 1991 cre?te cu 10%.
+--Pentru salaria?ii angaja?i în al?i ani valoarea nu se modific?.
+
+--varianta cu DECODE
+
+select last_name || ' ' || first_name "NUME", hire_date "DATA ANGAJARII", salary "SALARIU",
+decode(to_char(hire_date, 'YYYY'), '1989', salary+0.2*salary, '1990', salary+0.15*salary, '1991', salary+0.1*salary, salary) "DUPA MARIRE"
+from employees;--107 rezultate
+
+--varianta cu CASE -- MISSING KEYWORD (nu am reusit sa aflu ce gresesc)
+
+select last_name || ' ' || first_name "NUME", hire_date "DATA ANGAJARII", salary "SALARIU",
+(case to_char(hire_date, 'YYYY')
+when  '1989' then salary+0.2*salary,
+when '1990' then salary+0.15*salary,
+when '1991' then salary+0.1*salary,
+else salary 
+end as "MARIRE")
+from employees;
+
+--9. S? se afi?eze:
+--- suma salariilor, pentru job-urile care incep cu litera S;
+--- media generala a salariilor, pentru job-ul avand salariul maxim;
+--- salariul minim, pentru fiecare din celelalte job-uri.
+
+--varianta corecta
+select sum(e.salary) suma, e.job_id      
+    from jobs j, employees e
+      where j.job_id=e.job_id
+      and upper(j.job_title) like 'S%'
+      group by e.job_id
+      union
+    select media,'c'
+    from(select avg(e.salary) media
+      from employees e, jobs j
+      where j.job_id =(select job_id
+                      from employees
+                      where salary=(select max(salary)
+                                    from employees))
+                                    )aux
+                                    union
+      select min(salary) minn, job_id
+      from employees
+      where job_id is not null
+      and job_id not in (select job_id
+                        from jobs
+                        where upper(job_title) like 'S%')
+      and job_id!=(select job_id
+                      from employees
+                      where salary=(select max(salary)
+                                    from employees))
+      group by job_id;
+
+
+--varianta incorecta: trebuia sa am o singura coloana
+--cu subcereri necorelate
+select s.suma "SUMA", m.media "MEDIA", rest.minn "SALARIUL MINIM"
+from (select sum(e.salary) suma
+      from jobs j, employees e
+      where j.job_id=e.job_id
+      and upper(j.job_title) like 'S%'
+      group by e.job_id) s,
+      (select avg(e.salary) media
+      from employees e, jobs j
+      where j.job_id =(select job_id
+                      from employees
+                      where salary=(select max(salary)
+                                    from employees))) m,
+      (select min(salary) minn, job_id j
+      from employees
+      where job_id is not null
+      and job_id not in (select job_id
+                        from jobs
+                        where upper(job_title) like 'S%')
+      and job_id!=(select job_id
+                      from employees
+                      where salary=(select max(salary)
+                                    from employees))
+      group by job_id) rest;--rezultat:65 de randuri
+
+
+
+--11. S? se creeze o cerere prin care s? se afi?eze num?rul total de angaja?i ?i, din acest total,
+--num?rul celor care au fost angaja?i în 1997, 1998, 1999 si 2000. Denumiti capetele de tabel in
+--mod corespunzator. (Ambele metode ca la exerci?iul anterior.)
+
+--fara decode sau case
+--am luat si angajatii din job_history in caz ca cineva a fost angajat pe un alt job in 1997, 1998, 1999 sau 2000
+with nr_97 as (select count(*) num from
+              (select employee_id
+              from employees
+              where to_char(hire_date, 'YYYY')='1997'
+              union
+              select employee_id
+              from job_history
+              where to_char(start_date, 'YYYY')='1997')),
+nr_98 as (select count(*) num from
+              (select employee_id
+              from employees
+              where to_char(hire_date, 'YYYY')='1998'
+              union
+              select employee_id
+              from job_history
+              where to_char(start_date, 'YYYY')='1998')),
+nr_99 as  (select count(*) num from 
+              (select employee_id
+              from employees
+              where to_char(hire_date, 'YYYY')='1999'
+              union
+              select employee_id
+              from job_history
+              where to_char(start_date, 'YYYY')='1999')),
+nr_00 as (select count(*) num from 
+              (select employee_id
+              from employees
+              where to_char(hire_date, 'YYYY')='2000'
+              union
+              select employee_id
+              from job_history
+              where to_char(start_date, 'YYYY')='2000'))
+select tot.num "NUMAR TOTAL", nr_97.num "NUMAR 1997", nr_98.num "NUMAR 1998", nr_99.num "NUMAR 1999", nr_00.num "NUMAR 2000"
+from (select count(*) num
+    from (select distinct e.employee_id
+    from employees e 
+    full outer join job_history h on e.employee_id=h.employee_id)) tot, nr_97, nr_98, nr_99, nr_00; 
+--rezultat: 107	28	24	20	11
+
+
+--varianta cu decode si fara a lua in considerare joburile anterioare
+
+with nr_97 as (select count(*)num
+                from (select decode(to_char(hire_date, 'YYYY'),'1997', 1, 0) angajat
+                      from employees) tab
+                where tab.angajat=1
+              ),
+nr_98 as (select count(*) num
+                from (select decode(to_char(hire_date, 'YYYY'),'1998', 1, 0) angajat
+                      from employees) tab
+                where tab.angajat=1),
+nr_99 as (select count(*) num
+                from (select decode(to_char(hire_date, 'YYYY'),'1999', 1, 0) angajat
+                      from employees) tab
+                where tab.angajat=1),
+nr_00 as (select count(*) num
+                from (select decode(to_char(hire_date, 'YYYY'),'2000', 1, 0) angajat
+                      from employees) tab
+                where tab.angajat=1)
+select count(*) "NUMAR TOTAL", nr_97.num "ANGAJATI 1997", nr_98.num "ANGAJATI 1998", nr_99.num "ANGAJATI 1999", nr_00.num "ANGAJATI 2000"
+from employees, nr_97, nr_98, nr_99, nr_00
+group by nr_97.num, nr_98.num, nr_99.num, nr_00.num;
+--rezultat: 107	28	23	18	11
+
+--tot cu decode, dar mai simplu:
+
+select count(*) "NUMAR TOTAL",
+nvl(sum(decode(to_char(hire_date, 'YYYY'), '1997', 1, 0)), 0) "ANGAJATI 1997", 
+nvl(sum(decode(to_char(hire_date, 'YYYY'), '1998', 1, 0)), 0) "ANGAJATI 1998",
+nvl(sum(decode(to_char(hire_date, 'YYYY'), '1999', 1, 0)), 0) "ANGAJATI 1999",
+nvl(sum(decode(to_char(hire_date, 'YYYY'), '2000', 1, 0)), 0) "ANGAJATI 2000"
+from employees;
+--rezultat:107	28	23	18	11
+
+--cu subcereri corelate
+
+select count(*), (select sum(1)
+                  from employees
+                  where to_char(hire_date, 'YYYY')='1997') "ANGAJATI 1997",
+                  (select sum(1)
+                  from employees
+                  where to_char(hire_date, 'YYYY')='1998') "ANGAJATI 1998",
+                  (select sum(1)
+                  from employees
+                  where to_char(hire_date, 'YYYY')='1999') "ANGAJATI 1999",
+                  (select sum(1)
+                  from employees
+                  where to_char(hire_date, 'YYYY')='2000') "ANGAJATI 2000"
+from employees
+group by 1;
+--rezultat: 107	28	23	18	11

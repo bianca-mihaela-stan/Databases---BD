@@ -1,0 +1,304 @@
+--LAB 3-4 SLIDEURI
+--Afisati si comentati structura tabelei DEPARTMENTS
+SELECT *
+FROM DEPARTMENTS;
+
+--INTEROGARI MULTI - RELATIE
+--OPERATORI: produs cartezian, join, operatroi pe multimi
+
+
+--PROODUS CARTEZIAN/ CROSS JOIN :nu elimina duplicatele
+SELECT * 
+FROM DEPARTMENTS, COUNTRIES;
+
+--<=>
+
+SELECT * 
+FROM DEPARTMENTS CROSS JOIN COUNTRIES;
+
+--Sa se obtina lista tuturor posibilitatilor de amplasare a departamentelor firmei in orase.
+
+SELECT DEPARTMENT_ID, CITY
+FROM DEPARTMENTS, LOCATIONS;
+
+--<=>
+
+SELECT DEPARTMENT_ID, CITY
+FROM DEPARTMENTS CROSS JOIN LOCATIONS;
+
+--JOIN: extreage tupluri numai din relatiile corelate
+--Join este operaţia de regăsire a datelor din două sau mai multe
+--tabele, pe baza valorilor comune ale unor coloane. De obicei,
+--aceste coloane reprezintă cheia primară, respectiv cheia externă
+--a tabelelor.
+
+--THETA-JOIN: combina 2 tupluri cu conditia ca ele sa satisfaca o anumita relatie
+--daca conditia este de egalitate intre coloane =>   EQUIJOIN
+--altfel: NONEQUIJOIN
+
+SELECT *
+FROM DEPARTMENTS, EMPLOYEES
+WHERE DEPARTMENTS.DEPARTMENT_ID=EMPLOYEES.DEPARTMENT_ID;
+
+--<=>
+
+SELECT *
+FROM DEPARTMENTS D JOIN EMPLOYEES E ON (E.DEPARTMENT_ID=D.DEPARTMENT_ID);
+
+--la EQUIJOIN daca se ajunge la compararea a doua valori NULL rezultatul av fi NULL si nu va fi adaugat in tavbela
+
+
+--Să se afişeze pentru toţi angajaţii: numele salariatului, codul
+--departamentului şi numele departamentului din care face parte.
+
+SELECT E.LAST_NAME, E.SALARY, E.DEPARTMENT_ID, D.DEPARTMENT_NAME
+FROM DEPARTMENTS D, EMPLOYEES E
+WHERE D.DEPARTMENT_ID=E.DEPARTMENT_ID;
+
+--<=>
+
+SELECT E.LAST_NAME, E.SALARY, E.DEPARTMENT_ID, D.DEPARTMENT_NAME
+FROM DEPARTMENTS D JOIN EMPLOYEES E 
+ON (D.DEPARTMENT_ID=E.DEPARTMENT_ID);
+
+--Să se listeze job-urile distincte care există în departamentul 30.
+
+SELECT DISTINCT J.JOB_ID
+FROM DEPARTMENTS D, JOBS J, EMPLOYEES E
+WHERE E.DEPARTMENT_ID=D.DEPARTMENT_ID
+AND J.JOB_ID=E.JOB_ID;
+
+--<=>
+
+SELECT DISTINCT J.JOB_ID
+FROM (DEPARTMENTS D JOIN EMPLOYEES E ON(E.DEPARTMENT_ID=D.DEPARTMENT_ID)) JOIN JOBS J ON (E.JOB_ID=J.JOB_ID);
+
+--Să se afişeze numele, job-ul, codul şi numele departamentului
+--pentru toţi angajaţii care lucrează în Oxford.
+
+SELECT E.LAST_NAME, J.JOB_TITLE, E.EMPLOYEE_ID, D.DEPARTMENT_NAME
+FROM EMPLOYEES E, DEPARTMENTS D, JOBS J, LOCATIONS L
+WHERE E.DEPARTMENT_ID=D.DEPARTMENT_ID
+AND D.LOCATION_ID=L.LOCATION_ID
+AND E.JOB_ID=J.JOB_ID;
+
+--<=>
+
+SELECT E.LAST_NAME, J.JOB_TITLE, E.EMPLOYEE_ID, D.DEPARTMENT_NAME
+FROM ((EMPLOYEES E JOIN DEPARTMENTS D ON (E.DEPARTMENT_ID=D.DEPARTMENT_ID)) 
+JOIN LOCATIONS L ON (D.LOCATION_ID=L.LOCATION_ID))
+JOIN JOBS J ON (J.JOB_ID=E.JOB_ID);
+
+--Să se listeze job-urile distincte care există în departamentul 30.
+
+SELECT DISTINCT J.JOB_ID, J.JOB_TITLE
+FROM JOBS J,  EMPLOYEES E
+WHERE J.JOB_ID=E.JOB_ID
+AND E.DEPARTMENT_ID=30;
+
+--<=>
+
+SELECT DISTINCT J.JOB_ID, J.JOB_TITLE
+FROM JOBS J JOIN  EMPLOYEES E ON ( J.JOB_ID=E.JOB_ID)
+WHERE E.DEPARTMENT_ID=30;
+
+--Să se afişeze numele, job-ul, codul şi numele departamentului
+--pentru toţi angajaţii care lucrează în Oxford.
+
+SELECT LAST_NAME, E.JOB_ID, EMPLOYEE_ID, DEPARTMENT_NAME
+FROM EMPLOYEES E, DEPARTMENTS D, LOCATIONS L
+WHERE E.DEPARTMENT_ID=D.DEPARTMENT_ID
+AND D.LOCATION_ID=L.LOCATION_ID
+AND L.CITY='Oxford';
+
+--<=>
+
+SELECT LAST_NAME, E.JOB_ID, EMPLOYEE_ID, DEPARTMENT_NAME
+FROM (EMPLOYEES E JOIN DEPARTMENTS D ON (E.DEPARTMENT_ID=D.DEPARTMENT_ID))
+JOIN LOCATIONS L ON (D.LOCATION_ID=L.LOCATION_ID)
+WHERE L.CITY='Oxford';
+
+--Creaţi o cerere prin care să se afişeze numele angajatului, codul
+--job-ului, titlul job-ului, numele departamentului şi salariul
+--angajaţilor avand salariu sub 2000 $ sau care au fost angajati in
+--anul 1987.
+
+SELECT E.LAST_NAME, E.JOB_ID, J.JOB_TITLE, D.DEPARTMENT_NAME, E.SALARY, E.HIRE_DATE
+FROM EMPLOYEES E, DEPARTMENTS D, JOBS J
+WHERE E.DEPARTMENT_ID=D.DEPARTMENT_ID
+AND E.JOB_ID=J.JOB_ID
+AND (E.SALARY<2000
+OR TO_CHAR(HIRE_DATE, 'YYYY')='1987');
+
+--NATURAL JOIN : -presupune existenta unor coloane avand acelasi nume in ambele tabele
+--               -se selecteaza doar liniile care au valori egale pe coloanele selectate
+--               -daca tipul celor 2 coloane cu nume identice sunt diferite returneaza eroare
+
+
+--Afisati codul si departamentul angajatilor al caror manager e si manager de departament
+
+SELECT DISTINCT E.EMPLOYEE_ID, D.DEPARTMENT_NAME
+FROM EMPLOYEES E, DEPARTMENTS D
+WHERE E.DEPARTMENT_ID=D.DEPARTMENT_ID
+AND E.MANAGER_ID=D.MANAGER_ID;--astea sunt cele 2 coloane cu valori comune din employees si departments
+
+--<=>
+
+SELECT EMPLOYEE_ID, DEPARTMENT_NAME, DEPARTMENT_ID
+FROM EMPLOYEES JOIN DEPARTMENTS USING (DEPARTMENT_ID, MANAGER_ID);--merge si cu 2 valori
+--! nu am voie sa pun prefix la niciuna din coloanele de la using
+
+--<=>
+
+SELECT DEPARTMENT_ID, EMPLOYEE_ID
+FROM EMPLOYEES NATURAL JOIN DEPARTMENTS;
+
+--Sa se afiseze numele, salariul, titlul job-ului, oraşul şi ţara în care
+--lucrează angajatii condusi direct de managerul cu cod 100.
+
+SELECT E.FIRST_NAME, E.SALARY, J.JOB_TITLE, L.CITY, CO.COUNTRY_NAME
+FROM EMPLOYEES E, JOBS J, LOCATIONS L, COUNTRIES CO, DEPARTMENTS D
+WHERE E.JOB_ID=J.JOB_ID
+AND D.DEPARTMENT_ID=E.DEPARTMENT_ID
+AND D.LOCATION_ID=L.LOCATION_ID
+AND L.COUNTRY_ID=CO.COUNTRY_ID
+AND E.MANAGER_ID=100;
+
+--<=>
+
+SELECT E.FIRST_NAME, E.SALARY, J.JOB_TITLE, L.CITY, CO.COUNTRY_NAME
+FROM EMPLOYEES E JOIN JOBS J ON (E.JOB_ID=J.JOB_ID)
+JOIN DEPARTMENTS D ON (D.DEPARTMENT_ID=E.DEPARTMENT_ID)
+JOIN LOCATIONS L ON (D.LOCATION_ID=L.LOCATION_ID)
+JOIN COUNTRIES CO ON (L.COUNTRY_ID=CO.COUNTRY_ID)
+WHERE E.MANAGER_ID=100;
+
+--<=>
+
+SELECT E.FIRST_NAME, E.SALARY, J.JOB_TITLE, L.CITY, CO.COUNTRY_NAME
+FROM EMPLOYEES E JOIN JOBS J USING (JOB_ID)
+JOIN DEPARTMENTS D USING (DEPARTMENT_ID)
+JOIN LOCATIONS L USING (LOCATION_ID)
+JOIN COUNTRIES CO USING (COUNTRY_ID)
+WHERE E.MANAGER_ID=100;
+
+--NONEQUIJOIN
+
+--Sa se gaseasca toate titlurile de job-uri care au maximul
+--salariului mai mic decat salariul angajatului cu cod 100.
+
+SELECT J.JOB_TITLE
+FROM JOBS J, EMPLOYEES E
+WHERE J.MAX_SALARY<E.SALARY
+AND E.EMPLOYEE_ID=100;
+
+--<=>
+
+SELECT J.JOB_TITLE
+FROM JOBS J JOIN EMPLOYEES E ON (J.MAX_SALARY<E.SALARY)
+WHERE E.EMPLOYEE_ID=100;
+
+--SELF JOIN
+
+--SELF JOIN DE TIP NONEQUIJOIN
+
+--Să se afişeze numele şi data angajării pentru salariaţii care au fost
+--angajaţi după Gates
+
+SELECT E1.LAST_NAME, E1.HIRE_DATE
+FROM EMPLOYEES E1, EMPLOYEES E2
+WHERE E2.LAST_NAME='Gates'
+AND E1.HIRE_DATE>E2.HIRE_DATE;
+
+--<=>
+
+SELECT E1.LAST_NAME, E1.HIRE_DATE
+FROM EMPLOYEES E1 JOIN EMPLOYEES E2 ON (E1.HIRE_DATE>E2.HIRE_DATE)
+WHERE E2.LAST_NAME='Gates';
+
+--SELF JOIN DE TIN EQUIJOIN
+
+--Scrieti o cerere pentru a se afisa numele, luna (în litere) şi anul
+--angajării pentru toti salariatii din acelasi departament cu Gates, al
+--căror nume conţine litera “a”.
+
+SELECT E.LAST_NAME, TO_CHAR(E.HIRE_DATE, 'MONTH'),TO_CHAR(E.HIRE_DATE, 'YYYY')
+FROM EMPLOYEES E, EMPLOYEES E2
+WHERE E2.LAST_NAME='Gates'
+AND E.DEPARTMENT_ID=E2.DEPARTMENT_ID
+AND UPPER(E.LAST_NAME) LIKE '%A%';
+
+--Sa se afiseze codul şi numele angajaţilor care lucrează în
+--acelasi departament cu cel puţin un angajat al cărui nume
+--conţine litera “t”.
+
+SELECT DISTINCT E.EMPLOYEE_ID, E.LAST_NAME
+FROM EMPLOYEES E, EMPLOYEES E2
+WHERE E.DEPARTMENT_ID=E2.DEPARTMENT_ID
+AND UPPER(E2.LAST_NAME) LIKE '%T%'
+AND E.EMPLOYEE_ID!=E2.EMPLOYEE_ID;
+
+--Extindeti exercitiul ca sa se afiseze codul şi numele si
+--denumirea departamentului angajaţilor care lucrează în
+--acelasi departament cu cel puţin un angajat al cărui nume
+--conţine litera “t”.
+
+SELECT DISTINCT E.EMPLOYEE_ID, E.LAST_NAME, D.DEPARTMENT_ID
+FROM EMPLOYEES E2, EMPLOYEES E
+JOIN DEPARTMENTS D ON (D.DEPARTMENT_ID=E.DEPARTMENT_ID)
+WHERE E.DEPARTMENT_ID=E2.DEPARTMENT_ID
+AND UPPER(E2.LAST_NAME) LIKE '%T%'
+AND E.EMPLOYEE_ID!=E2.EMPLOYEE_ID;
+
+--OUTER JOIN (+) inseamna ca si daca nu avem valoare, av fi afisat
+--(+) se plaseaza unde pot sa am null si nu vreau sa pierd
+--(+) nu poate fi pus in ambele parti
+
+--left outer join: ia si tuplurile din dreapta care nu au corespondent in stanga
+--full outer join e left + right
+
+--Să se afişeze numele salariaţilor şi numele departamentelor în
+--care lucrează. Se vor afişa şi salariaţii care nu au asociat un
+--departament.
+
+SELECT E.LAST_NAME, D.DEPARTMENT_NAME
+FROM DEPARTMENTS D, EMPLOYEES E
+WHERE D.DEPARTMENT_ID(+)=E.DEPARTMENT_ID;
+
+--Să se afişeze numele departamentelor şi numele salariaţilor care
+--lucrează în ele. Se vor afişa şi departamentele care nu au salariaţi.
+
+SELECT D.DEPARTMENT_NAME, E.LAST_NAME
+FROM DEPARTMENTS D, EMPLOYEES E
+WHERE D.DEPARTMENT_ID=E.DEPARTMENT_ID(+);
+
+--Scrieti o cerere care afiseaza departamentele, chiar şi cele fără
+--funcţionari, şi funcţionarii, chiar şi cei care nu sunt asignaţi nici
+--unui departament.
+
+SELECT E.LAST_NAME || ' ' || E.FIRST_NAME, D.DEPARTMENT_NAME
+FROM DEPARTMENTS D, EMPLOYEES E
+WHERE D.DEPARTMENT_ID(+)=E.DEPARTMENT_ID
+UNION
+SELECT  E.LAST_NAME || ' ' || E.FIRST_NAME,  D.DEPARTMENT_NAME
+FROM DEPARTMENTS D, EMPLOYEES E
+WHERE D.DEPARTMENT_ID=E.DEPARTMENT_ID(+);
+
+--<=> se observa ca intre cele 2 metode e diferenta de vreo 8 linii daca las doar e.last_name
+--daca pun cu tot numele concatenat da acelasi rezultat
+
+SELECT DISTINCT E.LAST_NAME || ' ' || E.FIRST_NAME, D.DEPARTMENT_NAME
+FROM EMPLOYEES E FULL OUTER JOIN DEPARTMENTS D ON E.DEPARTMENT_ID=D.DEPARTMENT_ID;
+
+--SUBCERERI
+--Se cer info despre joburi(chiar vacante), angajati si departamente (chiar fara
+--angajati).
+
+SELECT J.JOB_ID, E.EMPLOYEE_ID, D.DEPARTMENT_ID
+FROM
+            (SELECT J.JOB_ID, E.EMPLOYEE_ID, D.DEPARTMENT_ID
+            FROM JOBS J, DEPARTMENTS D, EMPLOYEES E
+            WHERE J.JOB_ID=E.JOB_ID
+            AND D.DEPARTMENT_ID=E.DEPARTMENT_ID(+);) AUX
+        FULL OUTER JOIN DEPARTMENTS D
+        ON

@@ -1,0 +1,111 @@
+select * 
+from works_on
+order by employee_id;
+
+--Divizion: Afisati angajatii care lucreaza la toate proiectele cu bugetul de 10000.
+--Metoda 1: not exists
+select distinct employee_id
+from works_on a
+where not exists (select 1
+                  from project p
+                  where p.budget=10000
+                  and not exists (select 'x'
+                                  from works_on b
+                                  where b.project_id=p.project_id
+                                  and b.employee_id=a.employee_id));
+                                  
+--Metoda 2: count               
+select employee_id
+from works_on
+where project_id in (select project_id
+                    from project
+                    where budget=10000)
+group by employee_id
+having count(project_id)=(select count(*)--2 proiecte cu buget de 10000
+                          from project
+                          where budget=10000);
+
+--Metoda 3: minus
+select employee_id
+from works_on
+minus
+select employee_id from
+((select employee_id, project_id
+from (select distinct employee_id from works_on) t1,
+      (select project_id from project where budget=10000) t2
+      order by 2)
+      minus
+      select employee_id, project_id from works_on) t3;
+
+
+
+select distinct w.employee_id
+from works_on w, project p
+where w.project_id=p.project_id
+and p.budget=10000;
+148
+162
+125
+101
+200
+140
+145
+176
+150     
+
+
+
+--sa se listeze informatii despre angajatii care au lucrat in toate proiectele demarate in 
+--prmele 6 luni ale anului 2006.
+
+--metoda 4
+select distinct w.employee_id
+from works_on w
+where not exists(
+  (select project_id
+  from project p
+  where p.start_date>='1-jan-2006'
+  and p.start_date<'1-jul-2006')
+  minus
+  (select p.project_id
+  from project p, works_on b
+  where p.project_id=b.project_id
+  and b.employee_id=w.employee_id));--125
+  
+--metoda 3
+select employee_id
+from works_on
+minus
+select employee_id from
+  (select employee_id, project_id
+  from (select distinct employee_id from works_on) t1,
+        (select project_id from project p where p.start_date>='1-jan-2006'
+                                        and p.start_date<'1-jul-2006') t2
+  minus
+  select employee_id, project_id from works_on) t3;--101
+125
+
+--metoda 2
+select employee_id
+from works_on
+where project_id in (select project_id
+                    from project p
+                    where p.start_date>='1-jan-2006'
+                    and p.start_date<'1-jul-2006')
+group by employee_id
+having count(project_id)=(select count(*)--2 proiecte cu buget de 10000
+                          from project p
+                          where p.start_date>='1-jan-2006'
+                          and p.start_date<'1-jul-2006');
+                          
+--metoda 1
+select distinct employee_id
+from works_on a
+where not exists (select 1
+                  from project p
+                  where p.start_date>='1-jan-2006'
+                  and p.start_date<'1-jul-2006'
+                  and not exists (select 1
+                                  from works_on b
+                                  where b.project_id=p.project_id
+                                  and b.employee_id=a.employee_id));

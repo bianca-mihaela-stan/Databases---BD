@@ -1,0 +1,117 @@
+create table angajati_bms
+(
+  cod_ang number(4) constraint pk_ang_bms primary key,
+  nume varchar2(20) constraint nl_ang_bms not null,
+  prenume varchar2(20),
+  email char(15),
+  data_ang date default sysdate,
+  job varchar2(10),
+  cod_sef number(4),
+  salariu number(8,2) not null,
+  cod_dep number(2)
+);
+
+drop table angajati_bms;
+
+SELECT constraint_name, constraint_type, table_name
+FROM user_constraints
+WHERE lower(table_name) IN ('angajati_bms', 'departamente_bms');
+
+insert into angajati_bms
+values(100, 'Nume1', 'Prenume1', Null, Null, 'Director', null ,20000, 10);
+
+insert into angajati_bms
+values(101, 'Nume2', 'Prenume2', 'Nume2', to_date('02-02-2004', 'dd-mm-yyyy'), 'Inginer', 100, 10000, 10);
+
+insert into angajati_bms
+values(102, 'Nume3', 'Prenume3', 'Nume3', to_date('05-06-2000', 'dd-mm-yyyy'), 'Analist', 101, 5000, 20);
+
+insert into angajati_bms
+values(103, 'Nume4', 'Prenume4', null, null, 'Inginer', 100, 9000, 20);
+
+insert into angajati_bms
+values(104, 'Nume5', 'Prenume5', 'Nume5', null, 'Analist', 101, 3000, 30);
+
+desc angajati_bms;
+
+
+alter table angajati_bms
+add (comision number(4,2));
+
+alter table angajati_bms
+
+
+6.Setaţi o valoare DEFAULT pentru coloana salariu.
+;
+alter table angajati_bms
+modify(salariu number(8,2) default 0);
+
+desc angajati_bms;
+
+8. Actualizati valoarea coloanei comision, setând-o la valoarea 0.1 pentru salariaţii al căror job
+începe cu litera A. (UPDATE)
+
+update angajati_bms
+set comision=0.1
+where upper(job)='A%';
+
+select * from angajati_bms;
+
+10. Adăugaţi coloana nr_telefon în tabelul ANGAJATI_***, setându-i o valoare implicită.
+
+alter table angajati_bms
+add nr_telefon varchar2(10) default '0700000000';
+
+desc angajati_bms;
+
+alter table angajati_bms
+drop column nr_telefon;
+
+rename angajati_bms to angajati3_bms;
+
+select * from tab;
+
+
+
+
+--15)
+create table departamente_bms
+(
+cod_dep number(2),
+nume varchar2(15) constraint NL_dep_bms_nume not null,
+cod_director number(4)
+);
+--16)
+insert into departamente_bms
+values (10, 'Administrativ', 100);
+
+insert into departamente_bms
+values (20, 'Proiectare', 101);
+
+insert into departamente_bms
+values (30, 'Programare', null);
+
+--17)
+alter table departamente_bms
+modify cod_dep constraint PK_dept_cod_dep_bms Primary Key;
+
+drop table angajati_bms;
+
+create table angajati_bms
+(
+  cod_ang number(4) constraint pk_cod_ang_bms primary key,
+  nume varchar2(20) constraint nl_nume_bms not null,
+  prenume varchar2(20),
+  email char(15) constraint unk_email_bms unique,
+  data_ang date default sysdate,
+  job varchar2(10),
+  cod_sef number(4) references angajati_bms(cod_ang),
+  salariu number(8,2),
+  cod_dep number(2) constraint ck_cod_dep_bms check(cod_dep>0),
+  comision number(4,2),
+  constraint ck_sal_com_bms check(salariu>comision*100), 
+  constraint uk_nume_prenume_bms unique(nume, prenume)
+);
+
+
+tema 19
